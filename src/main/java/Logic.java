@@ -5,6 +5,7 @@ public class Logic {
     private static final String DB_URL = "jdbc:sqlite:C:\\Users\\z\\Desktop\\bugs.db";
 
     // Создание таблицы
+    /*
     public static void initialize() {
         String createTable = "CREATE TABLE IF NOT EXISTS bugs2 (" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT," +
@@ -19,7 +20,7 @@ public class Logic {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-    }
+    }*/
 
     // Создание бага
     public static int createBug(String description) {
@@ -82,7 +83,7 @@ public class Logic {
 
     // Обновление статуса бага
     public static void updateBug(int bugId, String newStatus) {
-        String updateQuery = "UPDATE bugs3 SET status = ? WHERE id = ?";
+        String updateQuery = "UPDATE bugs3 SET status = ? WHERE id = ?;";
         try (Connection conn = DriverManager.getConnection(DB_URL);
              PreparedStatement pstmt = conn.prepareStatement(updateQuery)) {
             pstmt.setString(1, newStatus);
@@ -102,5 +103,30 @@ public class Logic {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+    public static void setUserRole(String userId, String role) {
+        String insertQuery = "INSERT INTO users (userId, role) VALUES (?, ?);";
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(insertQuery)){
+            pstmt.setString(1, userId);
+            pstmt.setString(2, role);
+            pstmt.executeUpdate();
+        } catch (SQLException e ){ e.printStackTrace();}
+    }
+    public static String getUserRole(String chatId) {
+        StringBuilder result = new StringBuilder();
+        String selectQuery = "SELECT role FROM users WHERE userId = ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(selectQuery)) {
+            pstmt.setString(1, chatId);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                result.append(rs.getString("role"));
+            } else return "";
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return result.toString();
     }
 }

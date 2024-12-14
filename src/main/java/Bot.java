@@ -15,6 +15,8 @@ import java.util.Map;
 public class Bot extends TelegramLongPollingBot {
     private final Map<String, String> userStates = new HashMap<>(); // Хранение состояния пользователя
     private final Map<String, Integer> task = new HashMap<>();
+    private final Map<String, String> waitRole = new HashMap<>();
+    private final Map<String, String> selectRole = new HashMap<>();
     @Override
     public String getBotUsername() {
         return "PongGameBot";
@@ -32,8 +34,14 @@ public class Bot extends TelegramLongPollingBot {
             String userMessage = update.getMessage().getText();
 
             if (userMessage.equals("/start")) {
-                sendInlineKeyboard(chatId);
-            } else if ("waiting_for_bug_description".equals(userStates.get(chatId))) {
+                String userRole = Logic.getUserRole(chatId);
+                if (userRole.equals("")){
+                    sendMenuRole(chatId);
+                    return;
+                }else{
+                    sendInlineKeyboard(chatId);
+                }
+            }else if ("waiting_for_bug_description".equals(userStates.get(chatId))) {
                 int idBug = Logic.createBug(userMessage); // Создаем баг
                 task.put(chatId, idBug);
                 userStates.put(chatId, "w_i");
@@ -52,7 +60,7 @@ public class Bot extends TelegramLongPollingBot {
                     String newStatus = parts[1];
                     String textStatus = newStatus.equals("1")?"Открыт":"Закрыт";
                     Logic.updateBug(bugId, textStatus);
-                    sendMessage(chatId, "Стаус бага обновлен");
+                    sendMessage(chatId, "Статус бага обновлен");
                     userStates.remove(chatId);
                     sendInlineKeyboard(chatId);
                 }else {
@@ -68,8 +76,44 @@ public class Bot extends TelegramLongPollingBot {
         } else if (update.hasCallbackQuery()) {
             String chatId = update.getCallbackQuery().getMessage().getChatId().toString();
             String callbackData = update.getCallbackQuery().getData();
-
+            if (callbackData.equals("dev")){
+                Logic.setUserRole(chatId, "dev");
+                sendMessage(chatId, "Установлена роль: Разработчик");
+                sendInlineKeyboard(chatId);
+            }
             handleCallback(chatId, callbackData);
+        }
+    }
+
+    private void sendMenuRole(String chatId){
+        //Отправили месседж
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText("Выберите роль:");
+        //Создали кнопки
+        InlineKeyboardMarkup ik = new InlineKeyboardMarkup();
+        //Создали клаву
+        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+        //Строка с кнопками
+        List<InlineKeyboardButton> row1 = new ArrayList<>();
+        InlineKeyboardButton button = new InlineKeyboardButton();
+
+        button.setText("Разраб");
+        button.setCallbackData("dev");
+        row1.add(button);
+
+        InlineKeyboardButton button2 = new InlineKeyboardButton();
+
+        button2.setText("Тестер");
+        button2.setCallbackData("test");
+        row1.add(button2);
+        keyboard.add(row1);
+        ik.setKeyboard(keyboard);
+        message.setReplyMarkup(ik);
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
         }
     }
 
@@ -130,6 +174,12 @@ public class Bot extends TelegramLongPollingBot {
                 sendMessage(chatId, "Введите [ID бага] " +
                         "\n[новый статус] 1 = открыт, 2 = решен");
                 userStates.put(chatId, "waiting_for_new_status");
+                break;
+            case "dev":
+                selectRole.put(chatId, "dev");
+                break;
+            case "test":
+                selectRole.put(chatId, "test");
                 break;
             default:
                 sendMessage(chatId, "Неизвестное действие.");
